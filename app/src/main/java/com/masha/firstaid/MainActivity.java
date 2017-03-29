@@ -1,5 +1,7 @@
 package com.masha.firstaid;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -15,6 +17,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,18 +26,14 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
-    private RecyclerView recyclerView;
-    private List<String> list;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        list = new ArrayList<String>();
-        list.add("1 item");
-        list.add("2 item");
-        list.add("3 item");
+
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -43,8 +42,9 @@ public class MainActivity extends AppCompatActivity
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                //Snackbar.make(view, "Вызвать скорую помощь?", Snackbar.LENGTH_LONG)
+                Snackbar.make(view, "Call an emergency?", Snackbar.LENGTH_LONG)
+                        .setAction("Yes", snackbarOnClickListener).show();
             }
         });
 
@@ -58,12 +58,15 @@ public class MainActivity extends AppCompatActivity
         navigationView.setNavigationItemSelectedListener(this);
     }
 
-    void initRecyclerView() {
-        recyclerView = (RecyclerView) findViewById(R.id.recyclerView);
-      //  ArrayAdapter<String> adapter = new ArrayAdapter<>(this, R.layout.recycler_view_item, arr);
-        MyAdapter adapter = new MyAdapter(list);
-        recyclerView.setAdapter(adapter);
-    }
+    View.OnClickListener snackbarOnClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+        //    Toast.makeText(getApplicationContext(), "ОК!", Toast.LENGTH_LONG).show();
+            Intent intent = new Intent(Intent.ACTION_DIAL);
+            intent.setData(Uri.parse("tel:112"));
+            startActivity(intent);
+        }
+    };
 
     @Override
     public void onBackPressed() {
