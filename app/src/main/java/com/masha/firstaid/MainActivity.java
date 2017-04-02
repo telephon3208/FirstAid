@@ -1,11 +1,18 @@
 package com.masha.firstaid;
 
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -19,6 +26,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,14 +34,15 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
-
+    private boolean isStartedGPSsettings = false;
+    private AddressBuilder addressBuilder;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
+        addressBuilder = new AddressBuilder(this);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -58,15 +67,118 @@ public class MainActivity extends AppCompatActivity
         navigationView.setNavigationItemSelectedListener(this);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if (isStartedGPSsettings) {
+            isStartedGPSsettings = false;
+            showAddress();
+        }
+    }
+
     View.OnClickListener snackbarOnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
-        //    Toast.makeText(getApplicationContext(), "ОК!", Toast.LENGTH_LONG).show();
-            Intent intent = new Intent(Intent.ACTION_DIAL);
-            intent.setData(Uri.parse("tel:112"));
-            startActivity(intent);
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder.setTitle("Уточнить адрес?")
+                 //   .setMessage("Покормите кота!")
+                //    .setIcon(R.drawable.ic_android_cat)
+                    .setCancelable(false);
+            builder.setPositiveButton("Да",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    dialog.cancel();
+                                    //если GPS отключен, то показываем диалог
+                                    checkingGPS();
+                                }
+                            });
+            builder.setNegativeButton("Нет",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    dialog.cancel();
+                                    callAnEmergency();
+                                }
+                            });
+            AlertDialog alert = builder.create();
+            alert.show();
+
         }
     };
+
+    private void callAnEmergency() {
+        Intent intent = new Intent(Intent.ACTION_DIAL);
+        intent.setData(Uri.parse("tel:112"));
+        startActivity(intent);
+    }
+
+    private void checkingGPS() {
+        LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            showAddress();
+        } else {
+            showGPSTurnOnDialog();
+        }
+    }
+
+    //показываем диалоговое окно с адресом
+   private void showAddress() {
+
+       AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+       builder.setTitle("Вы находитесь здесь")
+               .setMessage(getAddress())
+               //    .setIcon(R.drawable.ic_android_cat)
+               .setCancelable(false);
+       builder.setPositiveButton("OK",
+               new DialogInterface.OnClickListener() {
+                   public void onClick(DialogInterface dialog, int id) {
+                       dialog.cancel();
+                       callAnEmergency();
+                   }
+               });
+
+       AlertDialog alert = builder.create();
+       alert.show();
+   }
+
+    //показываем диалоговое окно с вопросом включить ли GPS
+   private void showGPSTurnOnDialog() {
+       AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+       builder.setTitle("Включить GPS?")
+                  .setMessage("Это позволит точнее определить адрес.")
+               //    .setIcon(R.drawable.ic_android_cat)
+               .setCancelable(false);
+       builder.setPositiveButton("Да",
+               new DialogInterface.OnClickListener() {
+                   public void onClick(DialogInterface dialog, int id) {
+                       dialog.cancel();
+                       isStartedGPSsettings = true;
+                       startActivity(new Intent(
+                               android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+
+                   }
+               });
+       builder.setNegativeButton("Нет",
+               new DialogInterface.OnClickListener() {
+                   public void onClick(DialogInterface dialog, int id) {
+                       dialog.cancel();
+                       showAddress();
+                   }
+               });
+       AlertDialog alert = builder.create();
+       alert.show();
+   }
+
+   private String getAddress() {
+
+       StringBuffer s;
+     //  do {
+           s = addressBuilder.addressText;
+     //  } while (s.toString().isEmpty());
+       addressBuilder.close();
+       return s.toString();
+   }
 
     @Override
     public void onBackPressed() {
